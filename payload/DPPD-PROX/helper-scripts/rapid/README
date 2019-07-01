@@ -1,0 +1,149 @@
+##
+## Copyright (c) 2010-2017 Intel Corporation
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+##     http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+
+rapid (Rapid Automated Performance Indication for Dataplane)
+************************************************************
+
+rapid is a set of files offering an easy way to do a sanity check of the
+dataplane performance of an OpenStack environment.
+
+Copy the files in a directory on a machine that can run the OpenStack CLI
+commands and that can reach the OpenStack networks to connect to the VMs.
+
+You will need an image that has the PROX tool installed.
+A good way to do this is to use the packer tool to build an image for a target of your choice.
+You can also build this image manually by executing all the commands described in the deploycentos.sh.
+The default name of the qcow2 file is rapidVM.qcow2
+
+When using the packer tool, the first step is to upload an
+existing CentOS cloud image from the internet into OpenStack.
+Check out: https://cloud.centos.org/centos/7/images/
+You should now source the proper .rc file so Packer can connect to your OpenStack.
+There are 2 files: centos.json and deploycentos.sh, allowing you to create
+an image automatically. Run
+  # packer build centos.json
+Edit centos.json to reflect the settings of your environment: The following fields need to
+be the ID's of your system:
+  - "source_image": Needs to be the id of the Centos cloud image
+  - "flavor": Needs to be the ID of the flavor existing in your OpenStack environment that will be used
+    to start the VM in which we will install all tools
+  - "networks": ID of the network that will be used for the VM
+  - "use_floating_ip": true or false
+  - "floating_ip_pool": ID of the floating ip pool in case floating ip are being used
+  - "security_groups": ID of the security group being used
+
+Note that this procedure is not only installing the necessary tools to run PROX,
+but also does some system optimizations (tuned). Check deploycentos.sh for more details.
+
+Now you can run the createrapid.py file. Use help for more info on the usage:
+  # ./createrapid.py --help
+
+createrapid.py will use the OpenStack CLI to create the flavor, key-pair, network, image,
+servers, ...
+It will create a <STACK>.env file containing all info that will be used by runrapid.py
+to actually run the tests. Logging can be found in the CREATE<STACK>.log file
+You can use floating IP addresses by specifying the floating IP network
+--floating_network NETWORK
+or directly connect through the INTERNAL_NETWORK by using the following parameter:
+--floating_network NO
+/etc/resolv.conf will contain DNS info from the "best" interface. Since we are
+deploying VMs with multiple interface on different networks, this info might be
+taken from the "wrong" network (e.g. the dataplane network).
+
+Now you can run the runrapid.py file. Use help for more info on the usage:
+  # ./runrapid.py --help
+The script will connect to all machines that have been instantiated and it will launch
+PROX in all machines. This will be done through the admin IP assigned to the machines.
+Once that is done it will connect to the PROX tcp socket and start sending
+commands to run the actual test.
+Make sure the security groups allow for tcp access (ssh & prox port).
+It will print test results on the screen while running.
+The actual test that is running is described in <TEST>.test.
+
+Notes about prox_user_data.sh script:
+- The script contains commands that will be executed using cloud-init at
+  startup of the VMs.
+- huge pages are allocated for DPDK on node 0 (hard-coded) in the VM.
+
+Note on using SRIOV ports:
+Before running createrapid, make sure the network, subnet and ports are already created
+This can be done as follows (change the parameters to your needs):
+openstack network create --share --external --provider-network-type flat --provider-physical-network physnet2 fast-network
+openstack subnet create --network  fast-network  --subnet-range 20.20.20.0/24 --gateway none fast-subnet
+openstack port create --network fast-network --vnic-type direct --fixed-ip subnet=fast-subnet Port1
+openstack port create --network fast-network --vnic-type direct --fixed-ip subnet=fast-subnet Port2
+openstack port create --network fast-network --vnic-type direct --fixed-ip subnet=fast-subnet Port3
+Make sure to use the network and subnet in the createrapid parameters list. Port1, Port2 and Port3
+are being used in the *.env file.
+
+Note when doing tests using the gateway functionality on OVS:
+When a GW VM is sending packets on behalf of another VM (e.g. the generator), we need to make sure the OVS
+will allow those packets to go through. Therefore you need to the IP address of the generator in the
+"allowed address pairs" of the GW VM.
+
+Note when doing tests using encryption on OVS:
+Your OVS configuration might block encrypted packets. To allow packets to go through,
+you can disable port_security. You can do this by using the following commands
+neutron port-update xxxxxx --no-security-groups
+neutron port-update xxxxxx --port_security_enabled=False
+
+An example of the env file generated by createrapid.py can be found below.
+Note that this file can be created manually in case the stack is created in a
+different way (not using the createrapid.py). This can be useful in case you are
+not using OpenStack as a VIM or when using special configurations that cannot be
+achieved using createrapid.py. Fields needed for runrapid are:
+* all info in the [Mx] sections
+* the key information in the [OpenStack] section
+* the total_number_of_vms information in the [rapid] section
+
+[DEFAULT]
+admin_ip = none
+
+[M1]
+name = rapid-VM1
+admin_ip = 10.25.1.116
+dp_ip = 10.10.10.7
+dp_mac = fa:16:3e:59:b8:28
+
+[M2]
+name = rapid-VM2
+admin_ip = 10.25.1.126
+dp_ip = 10.10.10.11
+dp_mac = fa:16:3e:c9:54:c7
+
+[M3]
+name = rapid-VM3
+admin_ip = 10.25.1.108
+dp_ip = 10.10.10.15
+dp_mac = fa:16:3e:72:90:3e
+
+[OpenStack]
+stack = rapid
+vms = rapidVMs
+key = prox
+image = rapidVM
+image_file = rapidVM.qcow2
+dataplane_network = dataplane-network
+subnet = dpdk-subnet
+subnet_cidr = 10.10.10.0/24
+internal_network = admin_internal_net
+floating_network = floating-ip-net
+
+[rapid]
+loglevel = DEBUG
+version = 19.4.15
+total_number_of_machines = 3
+

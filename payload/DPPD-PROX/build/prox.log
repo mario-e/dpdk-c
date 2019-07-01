@@ -1,0 +1,18 @@
+=== prox 19.04 ===
+	Using DPDK 18.11.0
+	RDT-M. Supports Intel RDT Monitoring capability
+	RDT-A. Supports Intel RDT Allocation capability
+	Supports L3 Cache Intel RDT Monitoring
+	Intel RDT Monitoring has 63 maximum RMID
+	Supports L3 occupancy monitoring
+	Supports L3 Total bandwidth monitoring
+	Supports L3 Local bandwidth monitoring
+	L3 Cache Intel RDT Monitoring Capability has 63 maximum RMID
+	Upscaling_factor = 32768
+	Supports L3 Cache Allocation Technology
+	Code and Data Prioritization Technology supported
+	L3 Cache Allocation Technology Enumeration Highest COS number = 15
+	L2 Cache Allocation Technology Enumeration COS number = 0
+	Memory Bandwidth Allocation Enumeration COS number = 0
+=== Parsing configuration file './prox.cfg' ===
+error 	Error opening config file './prox.cfg': No such file or directory
