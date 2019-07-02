@@ -17,6 +17,7 @@ RUN apt-get install -y scapy
 
 COPY payload/ /tmp/payload
 
+RUN apt-get install -y netcat
 
 WORKDIR /tmp
 
