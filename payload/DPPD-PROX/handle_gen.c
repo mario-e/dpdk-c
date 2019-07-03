@@ -718,7 +718,7 @@ static uint64_t avg_time_stamp(uint64_t *time_stamp, uint32_t n)
 	return (tot_inter_pkt + n / 2)/n;
 }
 
-static int pcap_read_pkts(pcap_t *handle, const char *file_name, uint32_t n_pkts, struct pkt_template *proto, uint64_t *time_stamp)
+static int pcap_read_pkts(pcap_t *handle, const char *file_name, uint32_t n_pkts, uint32_t max_sz, struct pkt_template *proto, uint64_t *time_stamp)
 {
 	struct pcap_pkthdr header;
 	const uint8_t *buf;
@@ -729,7 +729,7 @@ static int pcap_read_pkts(pcap_t *handle, const char *file_name, uint32_t n_pkts
 
 		PROX_PANIC(buf == NULL, "Failed to read packet %d from pcap %s\n", i, file_name);
 		proto[i].len = header.len;
-		len = RTE_MIN(header.len, sizeof(proto[i].buf));
+		len = RTE_MIN(header.len, max_sz);
 		if (header.len > len)
 			plogx_warn("Packet truncated from %u to %zu bytes\n", header.len, len);
 
@@ -987,7 +987,7 @@ static void task_init_gen_load_pcap(struct task_gen *task, struct task_args *tar
 			"Failed to allocate %u bytes (in huge pages) for pcap file\n", task->max_frame_size);
 	}
 
-	pcap_read_pkts(handle, targ->pcap_file, task->n_pkts, task->pkt_template_orig, NULL);
+	pcap_read_pkts(handle, targ->pcap_file, task->n_pkts, max_frame_size, task->pkt_template_orig, NULL);
 	pcap_close(handle);
 	task_gen_reset_pkt_templates(task);
 }
@@ -1127,7 +1127,7 @@ static void init_task_gen_pcap(struct task_base *tbase, struct task_args *targ)
 		PROX_PANIC(task->proto[i].buf == NULL, "Failed to allocate %u bytes (in huge pages) for pcap file\n", max_frame_size);
 	}
 
-	pcap_read_pkts(handle, targ->pcap_file, task->n_pkts, task->proto, task->proto_tsc);
+	pcap_read_pkts(handle, targ->pcap_file, task->n_pkts, max_frame_size, task->proto, task->proto_tsc);
 	pcap_close(handle);
 }
 

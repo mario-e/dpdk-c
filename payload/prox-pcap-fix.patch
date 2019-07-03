@@ -1,7 +1,7 @@
-diff --git a/VNFs/DPPD-PROX/handle_gen.c b/VNFs/DPPD-PROX/handle_gen.c
+diff --git a/DPPD-PROX/handle_gen.c b/DPPD-PROX/handle_gen.c
 index 4bf2e6e..e458044 100644
---- a/VNFs/DPPD-PROX/handle_gen.c
-+++ b/VNFs/DPPD-PROX/handle_gen.c
+--- a/DPPD-PROX/handle_gen.c
++++ b/DPPD-PROX/handle_gen.c
 @@ -718,7 +718,7 @@ static uint64_t avg_time_stamp(uint64_t *time_stamp, uint32_t n)
  	return (tot_inter_pkt + n / 2)/n;
  }
